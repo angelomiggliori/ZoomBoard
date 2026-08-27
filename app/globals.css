@@ -1,0 +1,357 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-panel: var(--panel);
+  --color-panel-raised: var(--panel-raised);
+  --color-metal: var(--metal);
+  --color-metal-edge: var(--metal-edge);
+  --color-neon: var(--neon);
+
+  --font-sans: var(--font-geist);
+  --font-display: var(--font-chakra);
+  --font-mono: var(--font-chakra);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+:root {
+  color-scheme: dark;
+
+  /* Grafite escuro */
+  --background: oklch(0.16 0.006 260);
+  --foreground: oklch(0.93 0.006 260);
+
+  --card: oklch(0.2 0.008 260);
+  --card-foreground: oklch(0.93 0.006 260);
+
+  --popover: oklch(0.19 0.008 260);
+  --popover-foreground: oklch(0.93 0.006 260);
+
+  /* Acento neon (ciano-teal) */
+  --primary: oklch(0.82 0.15 195);
+  --primary-foreground: oklch(0.16 0.02 220);
+
+  --secondary: oklch(0.26 0.01 260);
+  --secondary-foreground: oklch(0.93 0.006 260);
+
+  --muted: oklch(0.24 0.008 260);
+  --muted-foreground: oklch(0.66 0.012 260);
+
+  --accent: oklch(0.28 0.012 260);
+  --accent-foreground: oklch(0.95 0.006 260);
+
+  --destructive: oklch(0.62 0.2 25);
+
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.82 0.15 195);
+
+  /* Superfícies do "device" */
+  --panel: oklch(0.145 0.006 260);
+  --panel-raised: oklch(0.22 0.008 260);
+  --metal: oklch(0.32 0.006 260);
+  --metal-edge: oklch(0.44 0.006 260);
+  --neon: oklch(0.82 0.15 195);
+
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body {
+    @apply bg-background text-foreground;
+  }
+  body {
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+}
+
+/* ---- Anti-seleção / anti-menu-de-contexto para o "device" ---- */
+.device-surface {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ---- Fundo grafite com textura sutil ---- */
+.graphite-bg {
+  background-color: var(--panel);
+  background-image:
+    radial-gradient(120% 80% at 50% -10%, oklch(0.24 0.01 260) 0%, transparent 55%),
+    radial-gradient(100% 60% at 50% 120%, oklch(0.19 0.02 240) 0%, transparent 60%);
+}
+
+/* Chassi metálico dos footswitches */
+.metal-plate {
+  background: linear-gradient(
+    180deg,
+    var(--metal-edge) 0%,
+    var(--metal) 45%,
+    oklch(0.24 0.006 260) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 18%),
+    inset 0 -2px 6px oklch(0 0 0 / 45%),
+    0 8px 18px oklch(0 0 0 / 45%);
+}
+
+.metal-plate-pressed {
+  background: linear-gradient(
+    180deg,
+    oklch(0.26 0.006 260) 0%,
+    oklch(0.2 0.006 260) 100%
+  );
+  box-shadow:
+    inset 0 2px 8px oklch(0 0 0 / 55%),
+    0 2px 6px oklch(0 0 0 / 40%);
+}
+
+/* ---- LED ---- */
+.led {
+  --led-color: oklch(0.82 0.15 195);
+  --led-bright: 1;
+  border-radius: 9999px;
+  transition: box-shadow 120ms ease, opacity 120ms ease, background-color 120ms ease;
+}
+
+.led-on {
+  background-color: color-mix(in oklch, var(--led-color) calc(var(--led-bright) * 100%), black);
+  box-shadow:
+    0 0 calc(6px + 14px * var(--led-bright)) color-mix(in oklch, var(--led-color) 90%, transparent),
+    0 0 calc(2px + 6px * var(--led-bright)) color-mix(in oklch, var(--led-color) 100%, transparent),
+    inset 0 0 4px oklch(1 0 0 / 40%);
+}
+
+.led-dim {
+  background-color: color-mix(in oklch, var(--led-color) 22%, black);
+  box-shadow:
+    inset 0 0 3px oklch(0 0 0 / 60%),
+    0 0 2px color-mix(in oklch, var(--led-color) 30%, transparent);
+  opacity: 0.55;
+}
+
+.led-off {
+  background-color: oklch(0.24 0.006 260);
+  box-shadow: inset 0 0 4px oklch(0 0 0 / 70%);
+}
+
+@keyframes led-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 4px color-mix(in oklch, var(--led-color) 40%, transparent),
+      inset 0 0 3px oklch(0 0 0 / 40%);
+    background-color: color-mix(in oklch, var(--led-color) 25%, black);
+  }
+  50% {
+    box-shadow:
+      0 0 calc(8px + 16px * var(--led-bright)) color-mix(in oklch, var(--led-color) 90%, transparent),
+      0 0 6px color-mix(in oklch, var(--led-color) 100%, transparent),
+      inset 0 0 4px oklch(1 0 0 / 40%);
+    background-color: color-mix(in oklch, var(--led-color) calc(var(--led-bright) * 100%), black);
+  }
+}
+
+.led-pulse {
+  animation: led-pulse var(--pulse-speed, 1600ms) ease-in-out infinite;
+}
+
+@keyframes led-blink {
+  0%,
+  49% {
+    background-color: color-mix(in oklch, var(--led-color) calc(var(--led-bright) * 100%), black);
+    box-shadow:
+      0 0 calc(6px + 12px * var(--led-bright)) color-mix(in oklch, var(--led-color) 90%, transparent),
+      inset 0 0 4px oklch(1 0 0 / 40%);
+  }
+  50%,
+  100% {
+    background-color: oklch(0.24 0.006 260);
+    box-shadow: inset 0 0 4px oklch(0 0 0 / 70%);
+  }
+}
+
+.led-blink {
+  animation: led-blink var(--pulse-speed, 900ms) steps(1, end) infinite;
+}
+
+/* Flash momentâneo (ex.: TAP) */
+@keyframes led-flash {
+  0% {
+    box-shadow:
+      0 0 22px color-mix(in oklch, var(--led-color) 95%, transparent),
+      inset 0 0 4px oklch(1 0 0 / 60%);
+    background-color: var(--led-color);
+  }
+  100% {
+    box-shadow: inset 0 0 4px oklch(0 0 0 / 60%);
+    background-color: color-mix(in oklch, var(--led-color) 22%, black);
+  }
+}
+
+.led-flash {
+  animation: led-flash 260ms ease-out;
+}
+
+/* ---- Acabamento HeadRush: chassi, placa translúcida e switch hexagonal ---- */
+.switch-chassis {
+  background-color: oklch(0.145 0.006 260);
+  background-image:
+    linear-gradient(135deg, transparent 0 47%, oklch(1 0 0 / 2.5%) 48%, transparent 49%),
+    linear-gradient(315deg, transparent 0 47%, oklch(0 0 0 / 4%) 48%, transparent 49%),
+    radial-gradient(100% 100% at 50% 0%, oklch(0.23 0.008 260 / 55%), transparent 65%);
+  background-size: 11px 11px, 13px 13px, 100% 100%;
+  border-color: oklch(0.72 0.11 82 / 38%);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 7%),
+    inset 0 0 0 1px oklch(0.72 0.11 82 / 8%),
+    0 30px 60px oklch(0 0 0 / 45%);
+}
+
+.led-bar {
+  --led-color: oklch(0.82 0.15 195);
+  --led-bright: 1;
+  display: block;
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: oklch(0.22 0.006 260);
+  box-shadow: inset 0 1px 2px oklch(0 0 0 / 65%);
+  transition: box-shadow 120ms ease, opacity 120ms ease, background-color 120ms ease;
+}
+
+.led-bar.led-on {
+  background-color: color-mix(in oklch, var(--led-color) calc(var(--led-bright) * 100%), black);
+  box-shadow:
+    0 0 calc(5px + 12px * var(--led-bright)) color-mix(in oklch, var(--led-color) 75%, transparent),
+    0 0 3px color-mix(in oklch, var(--led-color) 100%, transparent),
+    inset 0 1px 2px oklch(1 0 0 / 35%);
+}
+
+.led-bar.led-dim {
+  background-color: color-mix(in oklch, var(--led-color) 18%, black);
+  box-shadow: 0 0 3px color-mix(in oklch, var(--led-color) 22%, transparent), inset 0 1px 2px oklch(0 0 0 / 65%);
+  opacity: 0.6;
+}
+
+.led-bar.led-off {
+  background-color: oklch(0.2 0.005 260);
+}
+
+@keyframes led-bar-pulse {
+  0%, 100% { opacity: 0.35; transform: scaleX(0.96); }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+    background-color: color-mix(in oklch, var(--led-color) calc(var(--led-bright) * 100%), black);
+    box-shadow: 0 0 16px color-mix(in oklch, var(--led-color) 80%, transparent), inset 0 1px 2px oklch(1 0 0 / 35%);
+  }
+}
+
+.led-bar.led-pulse { animation: led-bar-pulse var(--pulse-speed, 1600ms) ease-in-out infinite; }
+
+@keyframes led-bar-blink {
+  0%, 49% {
+    opacity: 1;
+    background-color: color-mix(in oklch, var(--led-color) calc(var(--led-bright) * 100%), black);
+    box-shadow: 0 0 14px color-mix(in oklch, var(--led-color) 75%, transparent);
+  }
+  50%, 100% { opacity: 0.18; box-shadow: inset 0 1px 2px oklch(0 0 0 / 65%); }
+}
+
+.led-bar.led-blink { animation: led-bar-blink var(--pulse-speed, 900ms) steps(1, end) infinite; }
+
+@keyframes led-bar-flash {
+  0% { opacity: 1; background: var(--led-color); box-shadow: 0 0 24px color-mix(in oklch, var(--led-color) 95%, transparent); }
+  100% { opacity: 0.55; background: color-mix(in oklch, var(--led-color) 28%, black); box-shadow: inset 0 1px 2px oklch(0 0 0 / 60%); }
+}
+
+.led-bar.led-flash { animation: led-bar-flash 260ms ease-out; }
+
+.preset-plaque {
+  border: 1px solid oklch(1 0 0 / 8%);
+  border-radius: 0.25rem;
+  background:
+    linear-gradient(180deg, oklch(1 0 0 / 5%), transparent 42%),
+    linear-gradient(90deg, transparent, color-mix(in oklch, var(--plaque-color) 5%, transparent), transparent),
+    oklch(0.09 0.004 260 / 86%);
+  box-shadow:
+    inset 0 1px 1px oklch(1 0 0 / 9%),
+    inset 0 -2px 6px oklch(0 0 0 / 55%),
+    0 2px 5px oklch(0 0 0 / 30%);
+}
+
+.preset-plaque::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 15%, oklch(1 0 0 / 7%) 48%, transparent 54%);
+  opacity: 0.45;
+}
+
+.preset-plaque-text {
+  color: oklch(0.78 0.008 260);
+  text-shadow:
+    0 1px 0 oklch(0 0 0 / 90%),
+    0 -1px 2px color-mix(in oklch, var(--plaque-color) 28%, transparent),
+    0 0 7px color-mix(in oklch, var(--plaque-color) 12%, transparent);
+}
+
+.footswitch-hex {
+  clip-path: polygon(25% 3%, 75% 3%, 97% 50%, 75% 97%, 25% 97%, 3% 50%);
+  background: linear-gradient(145deg, oklch(0.52 0.006 260), oklch(0.22 0.005 260) 48%, oklch(0.42 0.006 260));
+  filter: drop-shadow(0 7px 8px oklch(0 0 0 / 50%));
+}
+
+.footswitch-hex::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  clip-path: inherit;
+  background: linear-gradient(160deg, oklch(0.34 0.006 260), oklch(0.13 0.004 260) 52%, oklch(0.3 0.006 260));
+  box-shadow: inset 0 2px 2px oklch(1 0 0 / 18%), inset 0 -5px 10px oklch(0 0 0 / 55%);
+}
+
+.footswitch-cap {
+  position: relative;
+  z-index: 1;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: radial-gradient(circle at 35% 28%, oklch(0.47 0.006 260), oklch(0.2 0.005 260) 72%);
+  box-shadow: inset 0 2px 3px oklch(1 0 0 / 16%), inset 0 -4px 7px oklch(0 0 0 / 65%);
+}
+
+.footswitch-hex-pressed {
+  filter: drop-shadow(0 2px 3px oklch(0 0 0 / 55%));
+}
