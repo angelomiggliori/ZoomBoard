@@ -1,0 +1,6 @@
+{
+  "name": "ZoomBoard",
+  "description": "Editor e controlador WebMIDI para pedaleiras Zoom G1On/G1Xon inspirado no HeadRush Prime com footswitches virtuais, barras de LED dinâmicas e persistência.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

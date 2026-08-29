@@ -1,0 +1,318 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-chakra: 'Chakra Petch', sans-serif;
+    --font-rajdhani: 'Rajdhani', sans-serif;
+    --font-inter: 'Inter', sans-serif;
+    --bg-chassis: #0b0c10;
+    --gold-accent: #d4af37;
+  }
+
+  body {
+    font-family: var(--font-inter), sans-serif;
+    background-color: #07080a;
+    color: #e2e8f0;
+    overflow-x: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+}
+
+.font-display {
+  font-family: var(--font-chakra), sans-serif;
+}
+
+.font-tech {
+  font-family: var(--font-rajdhani), sans-serif;
+}
+
+/* Proteção global anti-menu de contexto e anti-seleção */
+.device-surface {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Chassi principal com textura escura escovada e borda de alumínio anodizado */
+.headrush-texture {
+  background-color: #0c0e12;
+  background-image: 
+    radial-gradient(100% 120% at 50% 0%, #171b24 0%, #07080b 100%);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+}
+
+.gold-accent-line {
+  background: linear-gradient(90deg, transparent 0%, #d4af37 20%, #fef08a 50%, #d4af37 80%, transparent 100%);
+  height: 1.5px;
+}
+
+/* =========================================================================
+   REBAIXO EM DEGRAU LINE 6 POD HD500 (TIERED STEPPED CHASSIS)
+   - Patamar Superior (Fileira A): Fica na superfície plana superior do chassi, sem rebaixo
+   - Degrau de Transição Chanfrado Transversal: Rampa usinada de ponta a ponta com sombra e reflexo metálico
+   - Patamar Inferior Rebaixado (Fileira B): Patamar rebaixado onde ficam os footswitches inferiores
+   ========================================================================= */
+
+/* Transição de Degrau Chanfrado da POD HD500 de ponta a ponta */
+.pod-step-bevel {
+  position: relative;
+  width: 100%;
+  height: 20px;
+  margin: 8px 0 2px 0;
+  /* Face chanfrada inclinada que desce do patamar superior para o patamar rebaixado */
+  background: linear-gradient(180deg, 
+    #030406 0%, 
+    #080a0e 15%, 
+    #181d26 50%, 
+    #0d1016 80%, 
+    #040507 100%
+  );
+  border-top: 1px solid #000000;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 
+    0 12px 20px -2px rgba(0, 0, 0, 0.98),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* Patamar inferior rebaixado (onde fica a Fileira B) */
+.pod-lower-shelf {
+  position: relative;
+  width: 100%;
+  padding-top: 8px;
+  background: linear-gradient(180deg, 
+    #05070a 0%, 
+    #090c11 40%, 
+    #07090d 100%
+  );
+  border-radius: 0 0 20px 20px;
+  box-shadow: 
+    inset 0 14px 18px -6px rgba(0, 0, 0, 0.99),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* =========================================================================
+   LED PILL COM EXTENSÃO AMPLA E GLOW MULTICAMADA INTENSO AO REDOR
+   ========================================================================= */
+.led-pill-wide {
+  --led-color: #00f0ff;
+  --led-bright: 1;
+  display: block;
+  width: 100%;
+  max-width: 120px;
+  height: 6.5px;
+  border-radius: 9999px;
+  background-color: #12151d;
+  border: 1px solid rgba(0, 0, 0, 0.9);
+  transition: all 120ms ease;
+}
+
+@media (min-width: 640px) {
+  .led-pill-wide {
+    max-width: 145px;
+    height: 7.5px;
+  }
+}
+
+/* Glow rico com aura ao redor do LED Pill que projeta luz no chassi */
+.led-pill-on {
+  background-color: var(--led-color);
+  box-shadow: 
+    0 0 6px #ffffff,
+    0 0 14px var(--led-color),
+    0 0 28px var(--led-color),
+    0 0 44px var(--led-color),
+    0 0 60px var(--led-color),
+    inset 0 1px 1px rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.85);
+}
+
+.led-pill-dim {
+  background-color: var(--led-color);
+  opacity: 0.28;
+  filter: brightness(0.5);
+  box-shadow: 0 0 8px var(--led-color);
+}
+
+.led-pill-off {
+  background-color: #0e1118;
+  opacity: 0.2;
+}
+
+@keyframes led-pill-pulse {
+  0%, 100% {
+    opacity: 0.25;
+    box-shadow: 0 0 8px var(--led-color);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 
+      0 0 6px #ffffff,
+      0 0 16px var(--led-color),
+      0 0 32px var(--led-color),
+      0 0 52px var(--led-color);
+  }
+}
+
+.led-pill-pulse {
+  animation: led-pill-pulse var(--pulse-speed, 1600ms) ease-in-out infinite;
+}
+
+@keyframes led-pill-blink {
+  0%, 49% {
+    opacity: 1;
+    box-shadow: 
+      0 0 6px #ffffff,
+      0 0 16px var(--led-color),
+      0 0 32px var(--led-color);
+  }
+  50%, 100% {
+    opacity: 0.15;
+    box-shadow: none;
+  }
+}
+
+.led-pill-blink {
+  animation: led-pill-blink var(--pulse-speed, 900ms) steps(1, end) infinite;
+}
+
+.led-pill-flash {
+  background-color: #ffffff;
+  box-shadow: 0 0 28px #ffffff, 0 0 56px var(--led-color);
+}
+
+/* =========================================================================
+   TIRA DE DISPLAY FUMÊ HEADRUSH PEDALBOARD ORIGINAL (2017)
+   - Faixa horizontal longa e estreita, preta, integrada ao painel como uma tira de display.
+   - Não é caixinha/card separado; bordas extremamente discretas que se fundem ao chassi.
+   - O interior é quase preto com leve diferença de tonalidade em relação ao painel (acrílico fumê escuro).
+   - Sensação sutil de profundidade física usinada via inset shadow e leve highlight de borda inferior.
+   - Texto perfeitamente centralizado vertical e horizontalmente.
+   - Monocromático, sem cores RGB, simulando janela física de display OLED/LCD de equipamento musical.
+   ========================================================================= */
+.headrush-oled-strip,
+.carbon-dark-continuous-strip {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* Fundo quase preto fumê escuro físico integrado ao painel */
+  background: #06070a;
+  /* Bordas usinadas extremamente discretas integradas ao chassi metálico */
+  border-top: 1px solid #010203;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  border-left: 1px solid #040507;
+  border-right: 1px solid #040507;
+  border-radius: 2px;
+  /* Sombra interna sutil de profundidade / rebaixo de encaixe do display */
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.98),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 1px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+
+/* Célula individual dentro da janela contínua */
+.headrush-oled-cell,
+.carbon-dark-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 2px;
+  min-height: 1.85rem;
+  background: transparent !important;
+  cursor: pointer;
+}
+
+@media (min-width: 640px) {
+  .headrush-oled-cell,
+  .carbon-dark-cell {
+    padding: 6px 4px;
+    min-height: 2.15rem;
+  }
+}
+
+/* Texto Monocromático HeadRush 2017: Fonte compacta, limpa, tecnológica e sóbria */
+.headrush-oled-text,
+.patch-name-display {
+  font-family: var(--font-chakra), sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #71717a; /* Cinza claro/médio neutro em repouso */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+  transition: color 80ms ease;
+  line-height: 1;
+}
+
+@media (min-width: 640px) {
+  .headrush-oled-text,
+  .patch-name-display {
+    font-size: 0.9rem;
+  }
+}
+
+/* Texto do Preset Ativo: Branco puro nítido, sem cor RGB, com visual de display OLED ativo */
+.headrush-oled-text-active,
+.patch-name-display-active {
+  color: #f4f4f5; /* Branco/cinza claro monocromático nítido */
+  font-weight: 700;
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+/* Janela OLED individual para os controles laterais (Bank / Tap) */
+.headrush-oled-single-window,
+.carbon-dark-single-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 4px 6px;
+  min-height: 1.85rem;
+  background: #06070a;
+  border-top: 1px solid #010203;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  border-left: 1px solid #040507;
+  border-right: 1px solid #040507;
+  border-radius: 2px;
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.98),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 1px rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+}
+
+@media (min-width: 640px) {
+  .headrush-oled-single-window,
+  .carbon-dark-single-cell {
+    min-height: 2.15rem;
+  }
+}
+
+/* Parafuso decorativo Allen nos cantos */
+.allen-screw {
+  position: relative;
+  width: 11px;
+  height: 11px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #64748b 0%, #1e293b 100%);
+}
+
+.allen-screw::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  background: #090c10;
+}
