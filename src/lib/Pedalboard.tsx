@@ -9,11 +9,40 @@ import { DEFAULT_SWITCHES, DEMO_PATCHES } from '../lib/pedalboard';
 import { useZoomMidi } from '../lib/useZoomMidi';
 import { bankLetter } from '../lib/zoomMidi';
 import { FS_HOLD_MS } from '../lib/zoomProtocolEngine';
-import { NUM_BANKS_TOTAL } from '../lib/fsActions';
 import type { Patch, SwitchConfig } from '../types';
 
-const STORAGE_KEY = 'zoomboard:switch-config:v11';
+// v12: role 'momentary' virou 'bankSelect'/'tapTuner' (ver pedalboard.ts) --
+// bump obrigatório, senão uma config salva por uma sessão anterior a essa
+// mudança ficaria com BANK/TAP mudos (role antigo não bate com os novos
+// checks de handlePressStart/handleKeyUp).
+const STORAGE_KEY = 'zoomboard:switch-config:v12';
 const PRESET_ORDER = ['a1', 'a2', 'a3', 'a4', 'a5', 'b1', 'b2', 'b3', 'b4', 'b5'];
+
+// ---------------------------------------------------------------------------
+// Modo de interação do grid de 10 presets.
+//
+// Em modo normal cada botão seleciona diretamente um preset do banco ativo.
+// Clicar em BANK entra em "pickingBank": o MESMO grid de 10 botões passa a
+// representar os 10 bancos (A..J) -- um encaixe 1:1 direto, sem precisar do
+// truque de faixa A-E/F-J que o firmware original usa pra caber 10 bancos
+// em só 5 botões físicos (esse truque continua disponível em
+// zoomProtocolEngine.ts::handleFootswitchHold(2) caso um dia sirva pra um
+// controlador MIDI físico de 5 botões, mas não faz sentido forçar aqui).
+// Escolhido o banco, o grid passa pra "pickingPreset": agora mostra os 10
+// presets DAQUELE banco: escolher um confirma a troca de patch de verdade
+// e volta pro modo normal. Clicar em BANK de novo em qualquer ponto desse
+// fluxo cancela e volta pro normal, sem mandar nenhum MIDI.
+// ---------------------------------------------------------------------------
+type InteractionMode = { kind: 'normal' } | { kind: 'pickingBank' } | { kind: 'pickingPreset'; bank: number };
+
+/** Durante a escolha do banco, troca os rótulos do grid pelas letras A..J. */
+function displaySwitchesForMode(list: SwitchConfig[], mode: InteractionMode): SwitchConfig[] {
+  if (mode.kind !== 'pickingBank') return list;
+  return list.map((cfg) => {
+    const gridIndex = PRESET_ORDER.indexOf(cfg.id);
+    return { ...cfg, label: bankLetter(gridIndex), sublabel: 'BANCO' };
+  });
+}
 
 export const Pedalboard: React.FC = () => {
   const [switches, setSwitches] = useState<SwitchConfig[]>(() => {
@@ -33,6 +62,7 @@ export const Pedalboard: React.FC = () => {
 
   const [editing, setEditing] = useState<boolean>(false);
   const [configId, setConfigId] = useState<string | null>(null);
+  const [mode, setMode] = useState<InteractionMode>({ kind: 'normal' });
 
   // Botões atualmente afundados
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
@@ -45,8 +75,9 @@ export const Pedalboard: React.FC = () => {
 
   // Camada WebMIDI + Motor de Protocolo Zoom + Motor de Tap Tempo (o "motor").
   // activeBank/activePreset (numéricos, 0..9) são a fonte de verdade de qual
-  // slot está ativo -- a UI deriva o id visual (a1..b5) a partir deles, em
-  // vez de manter um estado paralelo que podia dessincronizar do motor.
+  // slot está ativo DE VERDADE no hardware -- não confundir com o "destaque"
+  // visual do grid, que durante o modo de seleção mostra outra coisa (ver
+  // highlightSlotId abaixo).
   const {
     midiSupported,
     midiConnected,
@@ -61,36 +92,51 @@ export const Pedalboard: React.FC = () => {
     triggerFootswitchHold,
   } = useZoomMidi();
 
-  const activeSlotId = PRESET_ORDER[activePresetIndex] ?? PRESET_ORDER[0];
+  // Slot ativo DE VERDADE no motor (independe do modo de seleção -- só muda
+  // quando um patch é realmente confirmado).
+  const realActiveSlotId = PRESET_ORDER[activePresetIndex] ?? PRESET_ORDER[0];
+
+  // Slot que deve ACENDER no grid agora. Em pickingBank, mostra onde o banco
+  // ativo está (referência de "você está aqui"); em pickingPreset não
+  // destaca nada (ainda não existe "ativo" nesse banco não visitado); em
+  // modo normal, é o preset ativo de verdade.
+  const highlightSlotId =
+    mode.kind === 'pickingBank' ? PRESET_ORDER[activeBank] ?? PRESET_ORDER[0] : mode.kind === 'pickingPreset' ? '' : realActiveSlotId;
+
+  const pickerHint =
+    mode.kind === 'pickingBank'
+      ? 'ESCOLHA O BANCO'
+      : mode.kind === 'pickingPreset'
+      ? `ESCOLHA O PRESET · BANCO ${bankLetter(mode.bank)}`
+      : null;
 
   const timeoutRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // Timers de "segurar" para BANK e TAP/TUNER -- essas duas têm dupla função
-  // (clique curto vs. hold), igual FS3/FS4 no firmware (footswitches.cpp).
-  // A ação de hold dispara assim que FS_HOLD_MS estoura, ainda pressionado;
-  // a ação de clique só dispara na soltura, e só se o hold nunca disparou.
+  // Timer de "segurar" -- hoje só o TAP/TUNER precisa (clique = tap tempo,
+  // segurar = liga/desliga afinador). BANK não usa mais hold: seu único
+  // propósito é abrir/fechar o seletor de banco, então um clique simples
+  // já basta, sem precisar da distinção clique-vs-segurar.
   const holdTimerRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
   const holdFiredRef = useRef<Record<string, boolean>>({});
 
   // Atualiza o nome do patch ativo quando lido via SysEx do hardware real.
-  // null = nenhuma resposta chegou ainda (mantém o nome de demonstração);
-  // '' = o pedal respondeu com um patch sem nome (mostra isso de verdade,
-  // não o nome de demonstração antigo -- ver decodePatchName em zoomMidi.ts).
+  // Sempre pelo slot ATIVO DE VERDADE (realActiveSlotId) -- nunca pelo que
+  // está sendo navegado no seletor, que ainda não foi confirmado.
   useEffect(() => {
     if (activePatchName !== null) {
       setPatches((prev) => {
-        const current = prev[activeSlotId];
+        const current = prev[realActiveSlotId];
         if (!current || current.name === activePatchName) return prev;
         return {
           ...prev,
-          [activeSlotId]: {
+          [realActiveSlotId]: {
             ...current,
             name: activePatchName,
           },
         };
       });
     }
-  }, [activePatchName, activeSlotId]);
+  }, [activePatchName, realActiveSlotId]);
 
   // Persistência
   useEffect(() => {
@@ -140,10 +186,44 @@ export const Pedalboard: React.FC = () => {
     }, 280);
   }, []);
 
-  // Início do pressionamento: afunda o botão e dispara comandos MIDI / Tap.
-  // Presets disparam na hora (feedback instantâneo de footswitch). BANK e
-  // TAP/TUNER armam um timer de hold e só decidem a ação no handlePressEnd
-  // (clique) ou quando o timer estoura ainda pressionado (hold).
+  // Clique em BANK (evento `click` nativo): alterna entre modo normal e
+  // "escolhendo banco". Sem hold aqui -- ver comentário no topo do arquivo.
+  const handleBankSelectClick = useCallback(() => {
+    setMode((prev) => (prev.kind === 'normal' ? { kind: 'pickingBank' } : { kind: 'normal' }));
+  }, []);
+
+  // Clique curto em TAP/TUNER (evento `click` nativo) -- só dispara se o
+  // hold ainda não tiver disparado pra esse pressionamento.
+  const handleTapTunerClick = useCallback(() => {
+    if (holdFiredRef.current['right']) return;
+    triggerTap();
+  }, [triggerTap]);
+
+  // Clique num botão do grid de presets (evento `click` nativo, não
+  // pointerdown). Em modo normal essa função não faz nada -- a seleção
+  // direta de preset já aconteceu no pointerdown (handlePressStart), pra
+  // manter o feedback instantâneo de footswitch. Aqui é só onde o grid
+  // "significa outra coisa" quando reaproveitado como seletor.
+  const handleGridClick = useCallback(
+    (id: string) => {
+      const gridIndex = PRESET_ORDER.indexOf(id);
+      if (gridIndex < 0) return;
+
+      if (mode.kind === 'pickingBank') {
+        setMode({ kind: 'pickingPreset', bank: gridIndex });
+      } else if (mode.kind === 'pickingPreset') {
+        sendBankAndProgram(mode.bank, gridIndex);
+        setMode({ kind: 'normal' });
+      }
+    },
+    [mode, sendBankAndProgram]
+  );
+
+  // Início do pressionamento (pointerdown): afunda o botão e, SÓ em modo
+  // normal, já dispara a troca de preset na hora (feedback instantâneo de
+  // footswitch). BANK e TAP/TUNER despacham pelo `role`, não mais por
+  // comparação de `id` -- é isso que tava causando o bug do banco: tratar o
+  // botão pela posição em vez de pela função que ele exerce.
   const handlePressStart = useCallback(
     (id: string) => {
       const cfg = switchesById[id];
@@ -153,35 +233,33 @@ export const Pedalboard: React.FC = () => {
 
       if (cfg.role === 'preset') {
         setSelectedBlockId(null);
-        const presetIndex = PRESET_ORDER.indexOf(id);
-        if (presetIndex >= 0) {
-          sendBankAndProgram(activeBank, presetIndex);
+        if (mode.kind === 'normal') {
+          const presetIndex = PRESET_ORDER.indexOf(id);
+          if (presetIndex >= 0) {
+            sendBankAndProgram(activeBank, presetIndex);
+          }
         }
-      } else if (id === 'left' || id === 'right') {
+        // Fora do modo normal, a ação real só acontece no click nativo (ver
+        // handleGridClick) -- aqui só afunda visualmente.
+      } else if (cfg.role === 'bankSelect') {
+        triggerFlashFeedback(id);
+        // Sem hold: o click nativo (handleBankSelectClick) decide tudo.
+      } else if (cfg.role === 'tapTuner') {
         triggerFlashFeedback(id);
         holdFiredRef.current[id] = false;
         holdTimerRef.current[id] = setTimeout(() => {
           holdFiredRef.current[id] = true;
-          if (id === 'left') {
-            // Hold no BANK = banco anterior (ver handlePressEnd pro clique = próximo)
-            const prevBank = (activeBank + NUM_BANKS_TOTAL - 1) % NUM_BANKS_TOTAL;
-            sendBankAndProgram(prevBank, activePresetIndex);
-          } else {
-            // Hold no TAP/TUNER = liga/desliga afinador. Reusa a lógica real
-            // do motor (idx 3 = FS4 no firmware, ver handleFootswitchHold em
-            // zoomProtocolEngine.ts) em vez de reimplementar o toggle aqui.
-            triggerFootswitchHold(3);
-          }
+          // Reusa a lógica real do motor (idx 3 = FS4 no firmware) em vez
+          // de reimplementar o toggle do afinador aqui.
+          triggerFootswitchHold(3);
         }, FS_HOLD_MS);
-      } else {
-        triggerFlashFeedback(id);
       }
     },
-    [switchesById, triggerFlashFeedback, sendBankAndProgram, activeBank, activePresetIndex, triggerFootswitchHold]
+    [switchesById, mode, triggerFlashFeedback, sendBankAndProgram, activeBank, triggerFootswitchHold]
   );
 
-  // Fim do pressionamento: sobe o botão e, pra BANK/TAP-TUNER, resolve o
-  // clique curto (só se o hold ainda não tiver disparado).
+  // Fim do pressionamento: sobe o botão e cancela o hold-timer de
+  // TAP/TUNER se ainda não tiver disparado.
   const handlePressEnd = useCallback(
     (id?: string) => {
       if (id) {
@@ -191,41 +269,29 @@ export const Pedalboard: React.FC = () => {
           return next;
         });
 
-        if (id === 'left' || id === 'right') {
-          if (holdTimerRef.current[id]) {
-            clearTimeout(holdTimerRef.current[id]!);
-            holdTimerRef.current[id] = null;
-          }
-          if (!holdFiredRef.current[id]) {
-            if (id === 'left') {
-              const nextBank = (activeBank + 1) % NUM_BANKS_TOTAL;
-              sendBankAndProgram(nextBank, activePresetIndex);
-            } else {
-              triggerTap();
-            }
-          }
+        const cfg = switchesById[id];
+        if (cfg?.role === 'tapTuner' && holdTimerRef.current[id]) {
+          clearTimeout(holdTimerRef.current[id]!);
+          holdTimerRef.current[id] = null;
         }
       } else {
         setPressedKeys(new Set());
       }
     },
-    [activeBank, activePresetIndex, sendBankAndProgram, triggerTap]
+    [switchesById]
   );
 
   // Listener global de soltura
   useEffect(() => {
     const handleGlobalPointerUp = () => {
       setPressedKeys(new Set());
-      // Rede de segurança: se pointerup/pointerleave não disparou no próprio
-      // elemento (dedo saiu da tela em outro lugar), cancela qualquer
-      // hold-timer pendente SEM disparar a ação de clique -- mais seguro que
-      // executar um comando MIDI "atrasado" bem depois do dedo já ter saído.
-      (['left', 'right'] as const).forEach((id) => {
-        if (holdTimerRef.current[id]) {
-          clearTimeout(holdTimerRef.current[id]!);
-          holdTimerRef.current[id] = null;
-        }
-      });
+      // Rede de segurança: cancela qualquer hold-timer pendente do
+      // TAP/TUNER sem disparar ação, caso pointerup/leave não tenha
+      // disparado no próprio elemento.
+      if (holdTimerRef.current['right']) {
+        clearTimeout(holdTimerRef.current['right']!);
+        holdTimerRef.current['right'] = null;
+      }
     };
     window.addEventListener('pointerup', handleGlobalPointerUp);
     window.addEventListener('pointercancel', handleGlobalPointerUp);
@@ -242,8 +308,10 @@ export const Pedalboard: React.FC = () => {
     return () => document.removeEventListener('contextmenu', handleContextMenu);
   }, []);
 
-  // Atalhos do teclado (o próprio e.repeat=false já evita reiniciar o
-  // hold-timer a cada auto-repeat do SO enquanto a tecla fica pressionada)
+  // Atalhos do teclado. O teclado nunca dispara um evento `click` nativo no
+  // elemento (esse só existe pra interação de ponteiro real), então no
+  // keyup replicamos manualmente a mesma decisão que o mouse ganha de
+  // graça via onClick.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (editing || configId) return;
@@ -267,10 +335,18 @@ export const Pedalboard: React.FC = () => {
       if (editing || configId) return;
       const keyName = e.key.toLowerCase();
       const switchId = takenKeys[keyName];
+      if (!switchId) return;
 
-      if (switchId) {
-        e.preventDefault();
-        handlePressEnd(switchId);
+      e.preventDefault();
+      handlePressEnd(switchId);
+
+      const cfg = switchesById[switchId];
+      if (cfg?.role === 'bankSelect') {
+        handleBankSelectClick();
+      } else if (cfg?.role === 'tapTuner') {
+        handleTapTunerClick();
+      } else if (cfg?.role === 'preset' && mode.kind !== 'normal') {
+        handleGridClick(switchId);
       }
     };
 
@@ -280,7 +356,18 @@ export const Pedalboard: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [editing, configId, takenKeys, handlePressStart, handlePressEnd]);
+  }, [
+    editing,
+    configId,
+    takenKeys,
+    switchesById,
+    mode,
+    handlePressStart,
+    handlePressEnd,
+    handleBankSelectClick,
+    handleTapTunerClick,
+    handleGridClick,
+  ]);
 
   const handleSaveConfig = (updated: SwitchConfig) => {
     setSwitches((prevList) =>
@@ -303,11 +390,11 @@ export const Pedalboard: React.FC = () => {
 
   const handleToggleBlock = (blockId: string) => {
     setPatches((prev) => {
-      const current = prev[activeSlotId];
+      const current = prev[realActiveSlotId];
       if (!current) return prev;
       return {
         ...prev,
-        [activeSlotId]: {
+        [realActiveSlotId]: {
           ...current,
           chain: current.chain.map((b) => (b.id === blockId ? { ...b, on: !b.on } : b)),
         },
@@ -315,7 +402,7 @@ export const Pedalboard: React.FC = () => {
     });
   };
 
-  const rawPatch = patches[activeSlotId] ?? Object.values(patches)[0];
+  const rawPatch = patches[realActiveSlotId] ?? Object.values(patches)[0];
   // Número exibido = banco real + preset real (1-indexado pra leitura
   // humana), sempre recalculado a partir do motor -- nunca o valor estático
   // do DEMO_PATCHES, que só fazia sentido fixo no banco A.
@@ -327,11 +414,15 @@ export const Pedalboard: React.FC = () => {
   const switchRight = switchesById['right'];
   const rowA = ['a1', 'a2', 'a3', 'a4', 'a5'].map((id) => switchesById[id]).filter(Boolean);
   const rowB = ['b1', 'b2', 'b3', 'b4', 'b5'].map((id) => switchesById[id]).filter(Boolean);
+  const displayRowA = displaySwitchesForMode(rowA, mode);
+  const displayRowB = displaySwitchesForMode(rowB, mode);
 
   const renderSideSwitch = (cfg?: SwitchConfig) => {
     if (!cfg) return null;
     const isPressed = pressedKeys.has(cfg.id);
     const isFlashing = flashingKeys.has(cfg.id);
+    const isPicking = cfg.role === 'bankSelect' && mode.kind !== 'normal';
+    const handleClick = cfg.role === 'bankSelect' ? handleBankSelectClick : handleTapTunerClick;
 
     return (
       <div className="flex flex-col items-center gap-1 sm:gap-1.5 w-full">
@@ -339,9 +430,9 @@ export const Pedalboard: React.FC = () => {
         <div className="w-full flex justify-center">
           <LedBar
             color={cfg.color}
-            mode={cfg.ledMode}
+            mode={isPicking ? 'blink' : cfg.ledMode}
             brightness={cfg.brightness}
-            pulseSpeed={cfg.pulseSpeed}
+            pulseSpeed={isPicking ? 350 : cfg.pulseSpeed}
             active={true}
             flash={isFlashing}
           />
@@ -379,6 +470,7 @@ export const Pedalboard: React.FC = () => {
               e.preventDefault();
               handlePressEnd(cfg.id);
             }}
+            onClick={handleClick}
             onConfigure={() => setConfigId(cfg.id)}
           />
         </div>
@@ -428,6 +520,7 @@ export const Pedalboard: React.FC = () => {
                 midiStatusDetail={lastMidiLog}
                 activeBank={activeBank}
                 tunerActive={isTunerActive}
+                pickerHint={pickerHint}
                 onSelectBlock={setSelectedBlockId}
                 onToggleBlock={handleToggleBlock}
               />
@@ -452,8 +545,8 @@ export const Pedalboard: React.FC = () => {
             {/* PATAMAR SUPERIOR (FILEIRA A) - SEM REBAIXO, FOOTS COLADINHOS */}
             <div className="w-full pb-1">
               <PresetRowDeck
-                switches={rowA}
-                activePreset={activeSlotId}
+                switches={displayRowA}
+                activePreset={highlightSlotId}
                 pressedKeys={pressedKeys}
                 flashingKeys={flashingKeys}
                 editing={editing}
@@ -469,6 +562,7 @@ export const Pedalboard: React.FC = () => {
                   e.preventDefault();
                   handlePressEnd(id);
                 }}
+                onClick={(id) => handleGridClick(id)}
                 onConfigure={(id) => setConfigId(id)}
               />
             </div>
@@ -479,8 +573,8 @@ export const Pedalboard: React.FC = () => {
             {/* PATAMAR INFERIOR REBAIXADO (FILEIRA B) */}
             <div className="pod-lower-shelf px-1 sm:px-2 pb-2">
               <PresetRowDeck
-                switches={rowB}
-                activePreset={activeSlotId}
+                switches={displayRowB}
+                activePreset={highlightSlotId}
                 pressedKeys={pressedKeys}
                 flashingKeys={flashingKeys}
                 editing={editing}
@@ -496,6 +590,7 @@ export const Pedalboard: React.FC = () => {
                   e.preventDefault();
                   handlePressEnd(id);
                 }}
+                onClick={(id) => handleGridClick(id)}
                 onConfigure={(id) => setConfigId(id)}
               />
             </div>

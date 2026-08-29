@@ -14,6 +14,13 @@ interface PresetRowDeckProps {
   onPointerUp: (id: string, e: React.PointerEvent) => void;
   onPointerLeave: (id: string, e: React.PointerEvent) => void;
   onConfigure: (id: string) => void;
+  /**
+   * Opcional. Ligado ao evento `click` nativo (não pointerdown/up). Em modo
+   * normal os presets já disparam no pointerdown (feedback instantâneo de
+   * footswitch) -- esse onClick só importa quando o grid está sendo
+   * reaproveitado como seletor de banco/preset (ver Pedalboard.tsx).
+   */
+  onClick?: (id: string, e: React.MouseEvent) => void;
 }
 
 /**
@@ -32,6 +39,7 @@ export const PresetRowDeck: React.FC<PresetRowDeckProps> = ({
   onPointerUp,
   onPointerLeave,
   onConfigure,
+  onClick,
 }) => {
   return (
     <div className="w-full flex flex-col gap-1 sm:gap-1.5">
@@ -108,6 +116,7 @@ export const PresetRowDeck: React.FC<PresetRowDeckProps> = ({
                 onPointerDown={(e) => onPointerDown(cfg.id, e)}
                 onPointerUp={(e) => onPointerUp(cfg.id, e)}
                 onPointerLeave={(e) => onPointerLeave(cfg.id, e)}
+                onClick={onClick ? (e) => onClick(cfg.id, e) : undefined}
                 onConfigure={() => onConfigure(cfg.id)}
               />
             </div>

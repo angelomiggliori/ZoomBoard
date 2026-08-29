@@ -22,6 +22,16 @@ export const FootswitchSvg: React.FC<FootswitchSvgProps> = ({
   const tiltDy = pressed ? 3 : 0;
   const tiltScaleY = pressed ? 0.96 : 1;
 
+  // Esse componente é montado 12x na mesma página (10 presets + BANK +
+  // TAP/TUNER). IDs de <defs> em SVG resolvem por getElementById no
+  // documento INTEIRO, não por escopo local ao <svg> -- IDs fixos repetidos
+  // faziam TODAS as instâncias pintarem com o gradiente da PRIMEIRA (o
+  // BANK, que renderiza primeiro no DOM), causando o efeito de "todo botão
+  // escurece junto" sempre que só o BANK mudava de pressed. useId() dá um
+  // prefixo único por instância de verdade.
+  const uid = React.useId();
+  const gid = (name: string) => `${uid}-${name}`;
+
   return (
     <svg
       width={width}
@@ -34,13 +44,13 @@ export const FootswitchSvg: React.FC<FootswitchSvgProps> = ({
     >
       <defs>
         {/* Sombra de oclusão ampla sob o pedal */}
-        <radialGradient id="g6-wide-shadow" cx="50%" cy="50%" r="50%">
+        <radialGradient id={gid('g6-wide-shadow')} cx="50%" cy="50%" r="50%">
           <stop offset="50%" stopColor="#000000" stopOpacity="0.95" />
           <stop offset="100%" stopColor="#000000" stopOpacity="0" />
         </radialGradient>
 
         {/* Moldura externa chanfrada em grafite escuro fosco */}
-        <linearGradient id="g6-wide-frame" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={gid('g6-wide-frame')} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#2c3340" />
           <stop offset="25%" stopColor="#1a1e27" />
           <stop offset="70%" stopColor="#10131a" />
@@ -48,14 +58,14 @@ export const FootswitchSvg: React.FC<FootswitchSvgProps> = ({
         </linearGradient>
 
         {/* Chanfro metálico de reflexo da moldura */}
-        <linearGradient id="g6-wide-bevel" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={gid('g6-wide-bevel')} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#64748b" />
           <stop offset="50%" stopColor="#334155" />
           <stop offset="100%" stopColor="#0f172a" />
         </linearGradient>
 
         {/* Superfície do pedal basculante em carbono / grafite */}
-        <linearGradient id="g6-wide-treadle" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={gid('g6-wide-treadle')} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor={pressed ? '#252b36' : '#38414f'} />
           <stop offset="25%" stopColor={pressed ? '#1a1f28' : '#272d38'} />
           <stop offset="60%" stopColor={pressed ? '#12151d' : '#191e27'} />
@@ -63,7 +73,7 @@ export const FootswitchSvg: React.FC<FootswitchSvgProps> = ({
         </linearGradient>
 
         {/* Frisos de tração e aço escovado metálico usinado */}
-        <linearGradient id="g6-wide-groove" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id={gid('g6-wide-groove')} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="#1e242f" />
           <stop offset="15%" stopColor="#64748b" />
           <stop offset="50%" stopColor="#cbd5e1" />
@@ -72,7 +82,7 @@ export const FootswitchSvg: React.FC<FootswitchSvgProps> = ({
         </linearGradient>
 
         {/* Parafusos Allen nos cantos */}
-        <linearGradient id="g6-wide-screw" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={gid('g6-wide-screw')} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#94a3b8" />
           <stop offset="100%" stopColor="#1e293b" />
         </linearGradient>
@@ -81,13 +91,13 @@ export const FootswitchSvg: React.FC<FootswitchSvgProps> = ({
       {/* 1. Sombra projetada na base */}
       <polygon
         points="8,6 152,6 136,84 24,84"
-        fill="url(#g6-wide-shadow)"
+        fill={`url(#${gid('g6-wide-shadow')})`}
       />
 
       {/* 2. Moldura externa chanfrada trapezoidal/triangular larga */}
       <path
         d="M 12 4 L 148 4 C 154 4, 157 7, 155 12 L 134 78 C 132 83, 128 86, 122 86 L 38 86 C 32 86, 28 83, 26 78 L 5 12 C 3 7, 6 4, 12 4 Z"
-        fill="url(#g6-wide-frame)"
+        fill={`url(#${gid('g6-wide-frame')})`}
         stroke="#05070a"
         strokeWidth="1.5"
       />
@@ -95,16 +105,16 @@ export const FootswitchSvg: React.FC<FootswitchSvgProps> = ({
       <path
         d="M 13.5 6 L 146.5 6 C 151.5 6, 154 8, 152.5 12 L 132.5 76 C 131 80, 127.5 83, 122 83 L 38 83 C 32.5 83, 29 80, 27.5 76 L 7.5 12 C 6 8, 8.5 6, 13.5 6 Z"
         fill="none"
-        stroke="url(#g6-wide-bevel)"
+        stroke={`url(#${gid('g6-wide-bevel')})`}
         strokeWidth="1"
         strokeOpacity="0.6"
       />
 
       {/* Parafusos nos cantos da moldura */}
-      <circle cx="15" cy="10" r="2.2" fill="url(#g6-wide-screw)" />
-      <circle cx="145" cy="10" r="2.2" fill="url(#g6-wide-screw)" />
-      <circle cx="39" cy="80" r="2" fill="url(#g6-wide-screw)" />
-      <circle cx="121" cy="80" r="2" fill="url(#g6-wide-screw)" />
+      <circle cx="15" cy="10" r="2.2" fill={`url(#${gid('g6-wide-screw')})`} />
+      <circle cx="145" cy="10" r="2.2" fill={`url(#${gid('g6-wide-screw')})`} />
+      <circle cx="39" cy="80" r="2" fill={`url(#${gid('g6-wide-screw')})`} />
+      <circle cx="121" cy="80" r="2" fill={`url(#${gid('g6-wide-screw')})`} />
 
       {/* Cavidade interna rebaixada escura */}
       <path
@@ -129,7 +139,7 @@ export const FootswitchSvg: React.FC<FootswitchSvgProps> = ({
         {/* Corpo do pedal em grafite/carbono escuro */}
         <path
           d="M 20 14 L 140 14 C 143 14, 144.5 15.5, 143 18 L 126 67 C 124.5 70, 121.5 71.5, 117.5 71.5 L 42.5 71.5 C 38.5 71.5, 35.5 70, 34 67 L 17 18 C 15.5 15.5, 17 14, 20 14 Z"
-          fill="url(#g6-wide-treadle)"
+          fill={`url(#${gid('g6-wide-treadle')})`}
           stroke="#0f131a"
           strokeWidth="1"
         />
@@ -147,23 +157,23 @@ export const FootswitchSvg: React.FC<FootswitchSvgProps> = ({
         <g strokeLinecap="round">
           {/* Friso 1 (Topo largo) */}
           <rect x="28" y="21" width="104" height="3.5" rx="1.5" fill="#0c0f14" stroke="#000000" strokeWidth="0.5" />
-          <rect x="29" y="21.5" width="102" height="2" rx="1" fill="url(#g6-wide-groove)" opacity={pressed ? 0.6 : 0.95} />
+          <rect x="29" y="21.5" width="102" height="2" rx="1" fill={`url(#${gid('g6-wide-groove')})`} opacity={pressed ? 0.6 : 0.95} />
 
           {/* Friso 2 */}
           <rect x="32" y="30" width="96" height="3.5" rx="1.5" fill="#0c0f14" stroke="#000000" strokeWidth="0.5" />
-          <rect x="33" y="30.5" width="94" height="2" rx="1" fill="url(#g6-wide-groove)" opacity={pressed ? 0.6 : 0.95} />
+          <rect x="33" y="30.5" width="94" height="2" rx="1" fill={`url(#${gid('g6-wide-groove')})`} opacity={pressed ? 0.6 : 0.95} />
 
           {/* Friso 3 (Central usinado) */}
           <rect x="36" y="39" width="88" height="4" rx="2" fill="#0c0f14" stroke="#000000" strokeWidth="0.5" />
-          <rect x="37" y="39.5" width="86" height="2.5" rx="1.2" fill="url(#g6-wide-groove)" opacity={pressed ? 0.7 : 1} />
+          <rect x="37" y="39.5" width="86" height="2.5" rx="1.2" fill={`url(#${gid('g6-wide-groove')})`} opacity={pressed ? 0.7 : 1} />
 
           {/* Friso 4 */}
           <rect x="40" y="48" width="80" height="3.5" rx="1.5" fill="#0c0f14" stroke="#000000" strokeWidth="0.5" />
-          <rect x="41" y="48.5" width="78" height="2" rx="1" fill="url(#g6-wide-groove)" opacity={pressed ? 0.6 : 0.95} />
+          <rect x="41" y="48.5" width="78" height="2" rx="1" fill={`url(#${gid('g6-wide-groove')})`} opacity={pressed ? 0.6 : 0.95} />
 
           {/* Friso 5 (Base) */}
           <rect x="44" y="57" width="72" height="3.5" rx="1.5" fill="#0c0f14" stroke="#000000" strokeWidth="0.5" />
-          <rect x="45" y="57.5" width="70" height="2" rx="1" fill="url(#g6-wide-groove)" opacity={pressed ? 0.6 : 0.95} />
+          <rect x="45" y="57.5" width="70" height="2" rx="1" fill={`url(#${gid('g6-wide-groove')})`} opacity={pressed ? 0.6 : 0.95} />
         </g>
 
         {/* Pivot mecânico inferior */}

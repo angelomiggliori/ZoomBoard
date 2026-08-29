@@ -13,6 +13,16 @@ interface FootSwitchButtonProps {
   onPointerUp: (e: React.PointerEvent) => void;
   onPointerLeave: (e: React.PointerEvent) => void;
   onConfigure: () => void;
+  /**
+   * Opcional. Ligado ao evento nativo `click` do navegador (não a
+   * pointerdown/up) -- só dispara depois de um clique de verdade
+   * confirmado pelo próprio navegador (mouse: down+up sem arrastar;
+   * touch: tap completo). Diferente de pointerdown, não é vulnerável a
+   * hover/toque acidental de trackpad. Usado pelos switches BANK/TAP em
+   * Pedalboard.tsx pra decidir a ação de clique curto; os presets
+   * continuam disparando no pointerdown (feedback instantâneo).
+   */
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 export const FootSwitchButton: React.FC<FootSwitchButtonProps> = ({
@@ -25,6 +35,7 @@ export const FootSwitchButton: React.FC<FootSwitchButtonProps> = ({
   onPointerUp,
   onPointerLeave,
   onConfigure,
+  onClick,
 }) => {
   const isLg = size === 'lg';
 
@@ -48,6 +59,9 @@ export const FootSwitchButton: React.FC<FootSwitchButtonProps> = ({
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerLeave}
         onPointerCancel={onPointerLeave}
+        onClick={(e) => {
+          if (!editing) onClick?.(e);
+        }}
         className={`relative grid place-items-center outline-none focus-visible:ring-2 focus-visible:ring-amber-400 cursor-pointer rounded-lg active:outline-none transition-transform w-full ${
           isLg ? 'h-20 sm:h-24' : 'h-16 sm:h-20'
         }`}

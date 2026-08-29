@@ -16,6 +16,11 @@ interface DeviceScreenProps {
   /** Banco ativo, 0..9 (A..J) -- ver zoomProtocolEngine.ts */
   activeBank: number;
   tunerActive: boolean;
+  /** Não-nulo quando o grid de presets virou seletor de banco/preset (ver
+   * InteractionMode em Pedalboard.tsx). Substitui o cabeçalho normal por um
+   * aviso -- sem isso, o usuário não teria como saber que apertar os
+   * footswitches agora significa outra coisa. */
+  pickerHint: string | null;
   onSelectBlock: (id: string) => void;
   onToggleBlock: (id: string) => void;
 }
@@ -31,6 +36,7 @@ export const DeviceScreen: React.FC<DeviceScreenProps> = ({
   midiStatusDetail,
   activeBank,
   tunerActive,
+  pickerHint,
   onSelectBlock,
   onToggleBlock,
 }) => {
@@ -109,8 +115,18 @@ export const DeviceScreen: React.FC<DeviceScreenProps> = ({
         </div>
       </div>
 
-      {/* 2. CABEÇALHO DO PATCH ATIVO -- ou tela de afinador, quando ativo (hold no TAP/TUNER) */}
-      {tunerActive ? (
+      {/* 2. CABEÇALHO DO PATCH ATIVO -- ou tela de afinador / seletor de
+          banco-preset, quando algum dos dois estiver ativo */}
+      {pickerHint ? (
+        <div className="px-4 pt-3 pb-1 flex flex-col items-center justify-center z-10 flex-1">
+          <span className="font-display text-2xl sm:text-3xl font-black text-amber-400 tracking-[0.1em] drop-shadow-[0_0_14px_rgba(245,158,11,0.4)] animate-pulse text-center">
+            {pickerHint}
+          </span>
+          <span className="font-tech text-xs text-neutral-400 mt-1.5 uppercase tracking-widest">
+            aperte BANK de novo pra cancelar
+          </span>
+        </div>
+      ) : tunerActive ? (
         <div className="px-4 pt-3 pb-1 flex flex-col items-center justify-center z-10 flex-1">
           <span className="font-display text-3xl sm:text-4xl font-black text-amber-400 tracking-[0.15em] drop-shadow-[0_0_14px_rgba(245,158,11,0.4)] animate-pulse">
             AFINADOR
@@ -143,7 +159,7 @@ export const DeviceScreen: React.FC<DeviceScreenProps> = ({
       )}
 
       {/* 3. CADEIA DE SINAL VIRTUAL (IN -> 5 SLOTS G1On -> OUT) */}
-      <div className={`flex-1 flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 px-3 py-2 overflow-x-auto z-10 scrollbar-none ${tunerActive ? 'hidden' : ''}`}>
+      <div className={`flex-1 flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 px-3 py-2 overflow-x-auto z-10 scrollbar-none ${tunerActive || pickerHint ? 'hidden' : ''}`}>
         {/* NÓ IN */}
         <div className="flex flex-col items-center justify-center shrink-0 mx-0.5">
           <span className="w-7 h-7 rounded-full border border-neutral-700 bg-neutral-900/80 font-tech font-bold text-[0.6rem] tracking-wider text-neutral-400 grid place-items-center shadow-inner">

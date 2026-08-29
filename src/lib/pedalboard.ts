@@ -3,7 +3,7 @@
 
 export type LedMode = 'active' | 'solid' | 'pulse' | 'blink' | 'off';
 
-export type SwitchRole = 'preset' | 'momentary' | 'toggle' | 'function';
+export type SwitchRole = 'preset' | 'bankSelect' | 'tapTuner';
 
 export interface SwitchConfig {
   id: string;
@@ -69,7 +69,7 @@ export const DEFAULT_SWITCHES: SwitchConfig[] = [
     ledMode: 'solid',
     brightness: 70,
     pulseSpeed: 1600,
-    role: 'momentary',
+    role: 'bankSelect',
   },
   {
     id: 'right',
@@ -80,7 +80,7 @@ export const DEFAULT_SWITCHES: SwitchConfig[] = [
     ledMode: 'blink',
     brightness: 80,
     pulseSpeed: 600,
-    role: 'momentary',
+    role: 'tapTuner',
   },
   // Fileira superior (A) — presets 1–5
   mkPreset('a1', 'CLEAN', '01', '#22e0d6', '1'),
